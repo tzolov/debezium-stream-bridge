@@ -35,11 +35,16 @@ public class DebeziumStreamApplication {
 	@Bean
 	public Consumer<ChangeEvent<String, String>> mySourceRecordConsumer(StreamBridge streamBridge) {
 		return new Consumer<ChangeEvent<String, String>>() {
+			
 			@Override
 			public void accept(ChangeEvent<String, String> changeEvent) {
-				System.out.println("[CDC Event]: " + changeEvent.toString());
-				String body = changeEvent.value();
-				streamBridge.send("mySourceRecordConsumer-in-1", body);
+				System.out.println("[CDC Event]: " + changeEvent.key());
+				
+				
+				String body = changeEvent.value();		
+				//streamBridge.send("mySourceRecordConsumer-in-1", body);
+				streamBridge.send("kafka-stream-cdc", body);
+				streamBridge.send("rabbit-stream-cdc", body);
 			}
 		};
 	}

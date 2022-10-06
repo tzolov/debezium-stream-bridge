@@ -1,0 +1,69 @@
+cdc:
+    # https://debezium.io/documentation/reference/1.9/connectors/mysql.html
+    debezium:
+        offset:
+            storage: org.apache.kafka.connect.storage.MemoryOffsetBackingStore
+            flush.interval.ms: 60000
+
+        name: my-sql-connector
+        connector:
+            class: io.debezium.connector.mysql.MySqlConnector
+        # Connecto to the MySQL CDC database
+        # (https://debezium.io/documentation/reference/1.9/connectors/mysql.html)
+        database:
+            user: root
+            password: debezium
+            hostname: localhost
+            port: 3306
+            server:
+                id: 85744
+                name: my-app-connector
+            history: io.debezium.relational.history.MemoryDatabaseHistory
+        
+        # Flattering: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html
+        transforms: unwrap
+        transforms.unwrap:
+            type: io.debezium.transforms.ExtractNewRecordState
+            drop.tombstones: false
+            delete.handling.mode: rewrite
+            add.fields: "name,db,table"
+
+spring:  
+    datasource:
+        type: com.zaxxer.hikari.HikariDataSource
+    lifecycle:
+        timeout-per-shutdown-phase: "10s"
+
+    # Destination Bindings. 
+    cloud:  
+        stream:           
+            default-binder: kafka1
+            bindings:
+                kafka-stream-cdc:
+                    binder: kafka1
+                    destination: input-cdc
+                    contentType: application/json
+                rabbit-stream-cdc:
+                    binder: rabbit1
+                    destination: input-cdc
+                    contentType: application/json    
+
+            # Binders configurations
+            binders:
+                # Kafka Binder doc: https://docs.spring.io/spring-cloud-stream-binder-kafka/docs/3.2.2/reference/html/spring-cloud-stream-binder-kafka.html#_apache_kafka_binder
+                kafka1:
+                    type: kafka
+                    environment:
+                        spring:
+                            kafka:
+                                bootstrapServers: 'localhost:9092'
+                # RabbitMQ Binder doc: https://docs.spring.io/spring-cloud-stream-binder-rabbit/docs/3.2.2/reference/html/spring-cloud-stream-binder-rabbit.html
+                rabbit1:
+                    type: rabbit
+                    environment:
+                        spring:
+                            rabbitmq:
+                                host: 'localhost'
+                                port: '5672'
+
+org.springframework.boot.autoconfigure.EnableAutoConfiguration: com.logaritex.cdc.core.CdcConfiguration
